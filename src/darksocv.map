@@ -15,48 +15,50 @@ IO               0x0000000080000000 0x0000000000000010 rw !x
 Linker script and memory map
 
 
-.text           0x0000000000000000      0x7a4
+.text           0x0000000000000000      0x8b0
  boot.o(.text)
- .text          0x0000000000000000       0x74 boot.o
+ .text          0x0000000000000000       0xa8 boot.o
                 0x0000000000000000                boot
  *(.text)
- .text          0x0000000000000074        0x0 io.o
- .text          0x0000000000000074      0x6bc stdio.o
-                0x0000000000000074                getchar
-                0x0000000000000090                putchar
-                0x00000000000000d0                gets
-                0x0000000000000188                putstr
-                0x00000000000001c8                puts
-                0x00000000000001e4                putdx
-                0x00000000000002dc                putx
-                0x00000000000002e4                putd
-                0x00000000000002ec                printf
-                0x00000000000003c0                strncmp
-                0x00000000000003f4                strcmp
-                0x00000000000003fc                strlen
-                0x0000000000000420                memcpy
-                0x0000000000000444                memset
-                0x0000000000000460                strtok
-                0x0000000000000500                atoi
-                0x0000000000000554                xtoi
-                0x0000000000000594                mac
-                0x000000000000059c                __umulsi3
-                0x00000000000005e4                __mulsi3
-                0x000000000000063c                __udiv_umod_si3
-                0x000000000000068c                __udivsi3
-                0x0000000000000694                __umodsi3
-                0x000000000000069c                __div_mod_si3
-                0x0000000000000720                __divsi3
-                0x0000000000000728                __modsi3
- .text          0x0000000000000730        0x0 main.o
- .text          0x0000000000000730       0x74 banner.o
-                0x0000000000000730                banner
+ .text          0x00000000000000a8        0x0 io.o
+ .text          0x00000000000000a8      0x768 stdio.o
+                0x00000000000000a8                getchar
+                0x00000000000000d0                putchar
+                0x0000000000000118                gets
+                0x00000000000001d8                putstr
+                0x0000000000000220                puts
+                0x0000000000000240                putdx
+                0x0000000000000330                putx
+                0x000000000000033c                putd
+                0x0000000000000348                printf
+                0x0000000000000424                strncmp
+                0x0000000000000460                strcmp
+                0x000000000000046c                strlen
+                0x0000000000000494                memcpy
+                0x00000000000004c0                memset
+                0x00000000000004e4                strtok
+                0x0000000000000588                atoi
+                0x00000000000005e4                xtoi
+                0x000000000000062c                mac
+                0x000000000000063c                mod
+                0x000000000000064c                __umulsi3
+                0x00000000000006a0                __mulsi3
+                0x00000000000006f8                __udiv_umod_si3
+                0x0000000000000754                __udivsi3
+                0x0000000000000760                __umodsi3
+                0x000000000000076c                __div_mod_si3
+                0x00000000000007f8                __divsi3
+                0x0000000000000804                __modsi3
+ .text          0x0000000000000810       0x18 main.o
+                0x0000000000000810                test_call
+ .text          0x0000000000000828       0x88 banner.o
+                0x0000000000000828                banner
 
-.text.startup   0x00000000000007a4      0x7d4
- .text.startup  0x00000000000007a4      0x7d4 main.o
-                0x00000000000007a4                main
+.text.startup   0x00000000000008b0      0x31c
+ .text.startup  0x00000000000008b0      0x31c main.o
+                0x00000000000008b0                main
 
-.data           0x0000000000001000      0x564
+.data           0x0000000000001000      0x280
  *(.data)
  .data          0x0000000000001000        0x0 boot.o
  .data          0x0000000000001000       0x18 io.o
@@ -78,28 +80,26 @@ Linker script and memory map
  .rodata.str1.4
                 0x0000000000001018       0x71 io.o
  *fill*         0x0000000000001089        0x3 
- .rodata        0x000000000000108c       0x40 stdio.o
  .rodata.str1.4
-                0x00000000000010cc       0x19 stdio.o
- *fill*         0x00000000000010e5        0x3 
+                0x000000000000108c       0x19 stdio.o
+ *fill*         0x00000000000010a5        0x3 
+ .rodata        0x00000000000010a8       0x40 stdio.o
  .rodata.str1.4
-                0x00000000000010e8      0x363 main.o
-                                        0x367 (size before relaxing)
- *fill*         0x000000000000144b        0x1 
+                0x00000000000010e8       0x78 main.o
  .rodata.str1.4
-                0x000000000000144c      0x110 banner.o
-                                        0x10d (size before relaxing)
+                0x0000000000001160      0x115 banner.o
  *(.sbss)
- .sbss          0x000000000000155c        0x4 io.o
-                0x000000000000155c                threads
- .sbss          0x0000000000001560        0x4 stdio.o
+ *fill*         0x0000000000001275        0x3 
+ .sbss          0x0000000000001278        0x4 io.o
+                0x0000000000001278                threads
+ .sbss          0x000000000000127c        0x4 stdio.o
 
-.sdata          0x0000000000001564        0xc
- .sdata         0x0000000000001564        0xc main.o
-                0x0000000000001564                opts
-                0x0000000000001566                port
-                0x0000000000001568                ip
-                0x000000000000156c                test
+.sdata          0x0000000000001280        0xc
+ .sdata         0x0000000000001280        0xc main.o
+                0x0000000000001280                opts
+                0x0000000000001282                port
+                0x0000000000001284                ip
+                0x0000000000001288                test
 
 .io             0x0000000080000000       0x10
  io.o(COMMON)
@@ -112,10 +112,23 @@ LOAD io.o
 LOAD banner.o
 OUTPUT(darksocv.o elf32-littleriscv)
 
-.comment        0x0000000000000000       0x29
- .comment       0x0000000000000000       0x29 boot.o
-                                         0x2a (size before relaxing)
- .comment       0x0000000000000029       0x2a io.o
- .comment       0x0000000000000029       0x2a stdio.o
- .comment       0x0000000000000029       0x2a main.o
- .comment       0x0000000000000029       0x2a banner.o
+.comment        0x0000000000000000       0x11
+ .comment       0x0000000000000000       0x11 boot.o
+                                         0x12 (size before relaxing)
+ .comment       0x0000000000000011       0x12 io.o
+ .comment       0x0000000000000011       0x12 stdio.o
+ .comment       0x0000000000000011       0x12 main.o
+ .comment       0x0000000000000011       0x12 banner.o
+
+.riscv.attributes
+                0x0000000000000000       0x1c
+ .riscv.attributes
+                0x0000000000000000       0x1c boot.o
+ .riscv.attributes
+                0x000000000000001c       0x1c io.o
+ .riscv.attributes
+                0x0000000000000038       0x1c stdio.o
+ .riscv.attributes
+                0x0000000000000054       0x1c main.o
+ .riscv.attributes
+                0x0000000000000070       0x1c banner.o

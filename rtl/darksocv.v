@@ -101,18 +101,29 @@ module darksocv
     input        UART_RXD,  // UART receive line
     output       UART_TXD,  // UART transmit line
 
-    output [3:0] LED,       // on-board leds
-    output [3:0] DEBUG      // osciloscope
+    output [3:0] LED,//,       // on-board leds
+    input       rtcsig,
+    output      trigger
+   // output [3:0] DEBUG      // osciloscope
 );
+
+
 
     // internal/external reset logic
 
     reg [7:0] IRES = -1;
 
 `ifdef QMTECH_SDRAM_LX16
-    always@(posedge XCLK) IRES <= XRES==0 ? -1 : IRES[7] ? IRES-1 : 0; // reset low
+    always@(posedge XCLK) IRES <= XRES==1 ? -1 : IRES[7] ? IRES-1 : 0; // reset low
 `else
-    always@(posedge XCLK) IRES <= XRES==1 ? -1 : IRES[7] ? IRES-1 : 0; // reset high
+    always@(posedge XCLK) IRES <= XRES==0 ? -1 : IRES[7] ? IRES-1 : 0; // reset high
+    // IRES == 1 then reset
+    // xres == 0 everything is fine
+    // then if IRES[7] is 1 then case is -1 or 0 for IRES
+    // if IRES[7] is 0 then IRES is cleared
+    /// IRES is either -1(cleared) or if already set cleared.
+    // RES 1 is reset
+    // RES == IRES[7]
 `endif
 
     // clock generator logic
@@ -183,8 +194,14 @@ module darksocv
 
     // when there is no need for a clock generator:
 
+    wire [7:0] BOARD_IRQ;
+    
+     //   always@(posedge XCLK) IRES <= XRES==0 ? -1 : IRES[7] ? IRES-1 : 0; // reset high
+
+
+
     wire CLK = XCLK;
-    wire RES = IRES[7];    
+    wire RES = IRES[7];// || BOARD_IRQ[6];    
 `endif
     // ro/rw memories
 
@@ -476,7 +493,6 @@ module darksocv
     reg IACK = 0;
     reg [31:0] TIMERFF = 0; // timer disabled
 
-    wire [7:0] BOARD_IRQ;
 
     wire   [7:0] BOARD_ID = `BOARD_ID;              // board id
     wire   [7:0] BOARD_CM = (`BOARD_CK/1000000);    // board clock (MHz)
@@ -534,10 +550,11 @@ module darksocv
     end
 
     assign BOARD_IRQ[7]   = IREQ^IACK;
+    //assign BOARD_IRQ[6]   = IREQ^IACK;
 
     // unused irqs
 
-    assign BOARD_IRQ[6:2] = 0;
+    assign BOARD_IRQ[5:2] = 0;
     assign BOARD_IRQ[0]   = 0;
 
     assign HLT = !IHIT||!DHIT||!WHIT;
@@ -582,7 +599,7 @@ module darksocv
 `else
         .CLK(!CLK),
 `endif
-        .RES(RES),
+        .IRES(RES),
         .HLT(HLT),
 `ifdef __THREADING__        
         .IREQ(IREQ^IACK),
@@ -595,6 +612,7 @@ module darksocv
         .BE(BE),
         .WR(WR),
         .RD(RD),
+        //.PAC_IRQ(BOARD_IRQ[6]),
         .DEBUG(KDEBUG)
     );
 
@@ -606,8 +624,56 @@ module darksocv
   end
 `endif
 
-    assign LED   = LEDFF[3:0];
-    
-    assign DEBUG = { GPIOFF[0], XTIMER, WR, RD }; // UDEBUG;
+    //assign LED   = KDEBUG[3:0];//LEDFF[3:0];
+        assign LED   = KDEBUG[3:0];// BOARD_IRQ[6];//LEDFF[3:0];
+        assign BOARD_IRQ[6] = XRES==0 ? 0 : BOARD_IRQ[6]; // reset low
+        
+        //assign CS_cell = gate ? 1'bz : CS_sc;
 
+
+    //assign DEBUG = { GPIOFF[0], XTIMER, WR, RD }; // UDEBUG;
+
+
+
+
+    reg detected = 0;
+    reg drive_cnt = 0;
+    reg [64:0]clk_cnt = 0;
+    
+    always@(negedge rtcsig)
+    begin
+    
+       if(drive_cnt==1)
+        begin
+            detected = 1;
+        end
+        
+        else
+        begin
+            detected = 0;
+        end
+
+        drive_cnt = ~drive_cnt;
+    end
+
+/*
+    always@(posedge XCLK)
+    begin
+    
+        if(detected)
+        begin
+            clk_cnt = clk_cnt + 1;
+        end
+        
+        else
+        begin
+            clk_cnt = 0;
+        end
+        
+    end*/
+    
+   assign trigger = detected ? 1 : 0;
+
+//    assign trigger = (clk_cnt > 8500000) ? 1 : 0;
+    //assign trigger = XCLK;
 endmodule

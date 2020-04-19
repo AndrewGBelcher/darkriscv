@@ -42,11 +42,18 @@
 `define MCC     7'b00100_11      // xxxi  rd,rs1,imm[11:0]
 `define RCC     7'b01100_11      // xxx   rd,rs1,rs2 
 `define MAC     7'b11111_11      // mac   rd,rs1,rs2
+`define MOD     7'b11111_10      // mod   rd,rs1,rs2
 
 // not implemented opcodes:
 
 `define FCC     7'b00011_11      // fencex
 `define CCC     7'b11100_11      // exx, csrxx
+
+// authenticate ra opcodes
+ `define SSLD  7'b10101_11      // ssld
+ `define SSST  7'b01010_11      // ssst
+ `define SSTH  7'b11110_11      // ssth
+
 
 // configuration file
 
@@ -59,7 +66,7 @@ module darkriscv
 //) 
 (
     input             CLK,   // clock
-    input             RES,   // reset
+    input             IRES,   // reset
     input             HLT,   // halt
     
 `ifdef __THREADING__    
@@ -77,7 +84,6 @@ module darkriscv
     
     output            WR,    // write enable
     output            RD,    // read enable 
-    
     output [3:0]  DEBUG      // old-school osciloscope based debug! :)
 );
 
@@ -85,6 +91,9 @@ module darkriscv
 
     wire [31:0] ALL0  = 0;
     wire [31:0] ALL1  = -1;
+ 
+    //assign HLT = hlt || SS_HLT;
+
 
 `ifdef __THREADING__
     reg XMODE = 0;     // 0 = user, 1 = exception
@@ -94,13 +103,50 @@ module darkriscv
 
     reg [31:0] XIDATA;
 
-    reg XLUI, XAUIPC, XJAL, XJALR, XBCC, XLCC, XSCC, XMCC, XRCC, XMAC; //, XFCC, XCCC;
+`ifdef __SSTACK__
+    reg SS_RES = 0;
+    reg XSS_RES = 0;
+
+	reg SS_INT = 0;
+	
+	reg [31:0] RECOVERY_RA;
+
+    reg [31:0] SHADOW_STACK_1 [0:255];
+    reg [31:0] SHADOW_STACK_2 [0:255];
+   // reg [31:0] SHADOW_STACK_3 [0:255];
+  //  reg [31:0] SHADOW_STACK_4 [0:255];
+
+
+   // wire [31:0] SS_INDEX = 32'd0;
+    reg [31:0] SS1_INDEX_VAL = 32'd0;
+    reg [31:0] SS2_INDEX_VAL = 32'd0;
+  //  reg [31:0] SS3_INDEX_VAL = 32'd0;
+ //   reg [31:0] SS4_INDEX_VAL = 32'd0;
+    reg [31:0] SS_THREAD_SEL = 32'd0;
+//    reg [31:0] KEY;
+ //   reg [31:0] SEED;
+  //  reg keyset;
+
+    wire RES = IRES || SS_RES;
+`else
+    wire RES = IRES;
+`endif
+    
+
+
+    reg XLUI, XAUIPC, XJAL, XJALR, XBCC, XLCC, XSCC, XMCC, XRCC, XMAC, XMOD;
+    
+`ifdef __SSTACK__            
+    reg XSSLD, XSSST, XSSTH;
+`endif
 
     reg [31:0] XSIMM;
     reg [31:0] XUIMM;
 
+
     always@(posedge CLK)
     begin        
+
         if(!HLT)
         begin
             XIDATA <= /*RES ? { ALL0[31:12], 5'd2, ALL0[6:0] } : HLT ? XIDATA : */IDATA;
@@ -117,6 +163,13 @@ module darkriscv
 
             XRCC   <= /*RES ? 0 : HLT ? XRCC   : */IDATA[6:0]==`RCC;
             XMAC   <= /*RES ? 0 : HLT ? XRCC   : */IDATA[6:0]==`MAC;
+            XMOD   <= /*RES ? 0 : HLT ? XRCC   : */IDATA[6:0]==`MOD;
+
+`ifdef __SSTACK__            
+            XSSLD   <= /*RES ? 0 : HLT ? XRCC   : */IDATA[6:0]==`SSLD;
+            XSSST   <= /*RES ? 0 : HLT ? XRCC   : */IDATA[6:0]==`SSST;
+            XSSTH   <= /*RES ? 0 : HLT ? XRCC   : */IDATA[6:0]==`SSTH;            
+`endif
             //XFCC   <= RES ? 0 : HLT ? XFCC   : IDATA[6:0]==`FCC;
             //XCCC   <= RES ? 0 : HLT ? XCCC   : IDATA[6:0]==`CCC;
 
@@ -155,13 +208,13 @@ module darkriscv
     
         reg [4:0] RESMODE = 0;
 
-        wire [4:0] DPTR   = RES ? RESMODE : { XMODE, XIDATA[10: 7] }; // set SP_RESET when RES==1
+        wire [4:0] DPTR   = (RES) ? RESMODE : { XMODE, XIDATA[10: 7] }; // set SP_RESET when RES==1
         wire [4:0] S1PTR  = { XMODE, XIDATA[18:15] };
         wire [4:0] S2PTR  = { XMODE, XIDATA[23:20] };
     `else
         reg [5:0] RESMODE = 0;
 
-        wire [5:0] DPTR   = RES ? RESMODE : { XMODE, XIDATA[11: 7] }; // set SP_RESET when RES==1
+        wire [5:0] DPTR   = (RES) ? RESMODE : { XMODE, XIDATA[11: 7] }; // set SP_RESET when RES==1
         wire [5:0] S1PTR  = { XMODE, XIDATA[19:15] };
         wire [5:0] S2PTR  = { XMODE, XIDATA[24:20] };
     `endif
@@ -176,13 +229,16 @@ module darkriscv
     
         reg [3:0] RESMODE = 0;
     
-        wire [3:0] DPTR   = RES ? RESMODE : XIDATA[10: 7]; // set SP_RESET when RES==1
+        wire [3:0] DPTR   = (RES) ? RESMODE : XSSLD ? 1 : XIDATA[10: 7]; // set SP_RESET when RES==1
         wire [3:0] S1PTR  = XIDATA[18:15];
         wire [3:0] S2PTR  = XIDATA[23:20];
     `else
         reg [4:0] RESMODE = 0;
-    
-        wire [4:0] DPTR   = RES ? RESMODE : XIDATA[11: 7]; // set SP_RESET when RES==1
+    `ifdef __SSTACK__
+        wire [4:0] DPTR   = (RES) ? RESMODE : XSSLD ? 1 : XIDATA[11: 7]; // set SP_RESET when RES==1
+    `else
+        wire [4:0] DPTR   = (RES) ? RESMODE : XIDATA[11: 7]; // set SP_RESET when RES==1
+    `endif
         wire [4:0] S1PTR  = XIDATA[19:15];
         wire [4:0] S2PTR  = XIDATA[24:20];    
     `endif
@@ -210,6 +266,14 @@ module darkriscv
     
     wire    RCC = FLUSH ? 0 : XRCC; // OPCODE==7'b0110011; //FCT3
     wire    MAC = FLUSH ? 0 : XMAC; // OPCODE==7'b0110011; //FCT3
+    wire    MOD = FLUSH ? 0 : XMOD; // OPCODE==7'b0110011; //FCT3
+    
+    `ifdef __SSTACK__
+    wire    SSLD = FLUSH ? 0 : XSSLD; // OPCODE==7'b1010101
+    wire    SSST = FLUSH ? 0 : XSSST; // OPCODE==7'b0101001
+    wire    SSTH = FLUSH ? 0 : XSSTH; // OPCODE==7'b0101001
+    `endif
+ 
     //wire    FCC = FLUSH ? 0 : XFCC; // OPCODE==7'b0001111; //FCT3
     //wire    CCC = FLUSH ? 0 : XCCC; // OPCODE==7'b1110011; //FCT3
 
@@ -220,13 +284,13 @@ module darkriscv
     reg [31:0] NXPC;        // 32-bit program counter t+1
     reg [31:0] PC;		    // 32-bit program counter t+0
 
-    `ifdef __RV32E__
-        reg [31:0] REG1 [0:31];	// general-purpose 16x32-bit registers (s1)
-        reg [31:0] REG2 [0:31];	// general-purpose 16x32-bit registers (s2)
-    `else
-        reg [31:0] REG1 [0:63];	// general-purpose 32x32-bit registers (s1)
-        reg [31:0] REG2 [0:63];	// general-purpose 32x32-bit registers (s2)    
-    `endif
+`ifdef __RV32E__
+    reg [31:0] REG1 [0:31];	// general-purpose 16x32-bit registers (s1)
+    reg [31:0] REG2 [0:31];	// general-purpose 16x32-bit registers (s2)
+`else
+    reg [31:0] REG1 [0:63];	// general-purpose 32x32-bit registers (s1)
+    reg [31:0] REG2 [0:63];	// general-purpose 32x32-bit registers (s2)    
+`endif
 /*
     integer i; 
     initial 
@@ -243,13 +307,13 @@ module darkriscv
     reg [31:0] NXPC;        // 32-bit program counter t+1
     reg [31:0] PC;		    // 32-bit program counter t+0
 
-    `ifdef __RV32E__
-        reg [31:0] REG1 [0:31];	// general-purpose 16x32-bit registers (s1)
-        reg [31:0] REG2 [0:31];	// general-purpose 16x32-bit registers (s2)
-    `else
-        reg [31:0] REG1 [0:31];	// general-purpose 32x32-bit registers (s1)
-        reg [31:0] REG2 [0:31];	// general-purpose 32x32-bit registers (s2)
-    `endif
+`ifdef __RV32E__
+    reg [31:0] REG1 [0:31];	// general-purpose 16x32-bit registers (s1)
+    reg [31:0] REG2 [0:31];	// general-purpose 16x32-bit registers (s2)
+`else
+    reg [31:0] REG1 [0:31];	// general-purpose 32x32-bit registers (s1)
+    reg [31:0] REG2 [0:31];	// general-purpose 32x32-bit registers (s2)
+`endif
 /*
     integer i; 
     initial 
@@ -303,7 +367,8 @@ module darkriscv
                          FCT3==4 ? U1REG^S2REGX :
                          FCT3==3 ? U1REG<U2REGX?1:0 : // unsigned
                          FCT3==2 ? S1REG<S2REGX?1:0 : // signed
-                         FCT3==0 ? (XRCC&&FCT7[5] ? U1REG-U2REGX : U1REG+S2REGX) :
+                         //FCT3==0 ? (FCT7[4]==0 ? (XRCC&&FCT7[5] ? U1REG-U2REGX : U1REG+S2REGX) : (U1REG%S2REGX)) :
+                         FCT3==0 ?  XRCC&&FCT7[5] ? U1REG-U2REGX : U1REG+S2REGX :
                          FCT3==1 ? U1REG<<U2REGX[4:0] :                         
                          //FCT3==5 ? 
 `ifdef MODEL_TECH        
@@ -325,6 +390,19 @@ module darkriscv
     wire signed [15:0] K1TMP = S1REG[15:0];
     wire signed [15:0] K2TMP = S2REG[15:0];
     wire signed [31:0] KDATA = K1TMP*K2TMP;
+
+`endif
+
+`ifdef __MOD__
+
+    // MOD instruction rd = s1%s2 (OPCODE==7'b1111110)
+    // 0000 0000 1100 0101 1000 0101 0111 1110 = 00c5857E
+    // 0000000 00010 00001 000 00011 1111110
+    // 00000000001000001000000111111110
+    wire  [31:0] TMP = S1REG[31:0];
+    wire  [31:0] TMP2 = S2REG[31:0];
+    wire  [31:0] TMP3 = TMP / TMP2;
+    wire  [31:0] KDATA2 = (TMP - (TMP3 * TMP2));
 
 `endif
 
@@ -377,41 +455,122 @@ module darkriscv
 
     always@(posedge CLK)
     begin
+        
         RESMODE <= RESMODE +1;
 
+
+`ifdef __SSTACK__
+
+		SS_THREAD_SEL = SSTH ? IDATA[31:12] : RES ? 0 : SS_THREAD_SEL;
+
+    // !!! we also need 4 diff stack index values too for each thread!
+       case (SS_THREAD_SEL)
+           1: SHADOW_STACK_2[SS2_INDEX_VAL] = SSST ? REG1[1] : SHADOW_STACK_2[SS2_INDEX_VAL];
+           default: SHADOW_STACK_1[SS1_INDEX_VAL] = SSST ? REG1[1] : SHADOW_STACK_1[SS1_INDEX_VAL];
+       endcase
+
+		// handle exeptions and trigger reset signal
+       case (SS_THREAD_SEL)
+
+           1: SS_RES =	SSTH ? (SS_THREAD_SEL > 1) : 
+						SSST ? (SS2_INDEX_VAL > 254) : 
+						SSLD ? (SS2_INDEX_VAL < 1)  : 
+						SS_RES ^ RES;
+
+           default: SS_RES =	SSTH ? (SS_THREAD_SEL > 1) : 
+						SSST ? (SS1_INDEX_VAL > 254) : 
+						SSLD ? (SS1_INDEX_VAL < 1)  : 
+						SS_RES ^ RES;
+       endcase
+        
+       case (SS_THREAD_SEL)
+
+           1: 
+           begin
+           SS2_INDEX_VAL = SS_RES ? 0 :
+           		           RES ? 0 :
+                           SSLD ? (SS2_INDEX_VAL - 1) :
+                           SSST ? (SS2_INDEX_VAL + 1) : 
+                           SS2_INDEX_VAL;
+                           
+		   SS1_INDEX_VAL = SS_RES ? 0 :
+		                   RES ? 0 :
+		                   SS1_INDEX_VAL;
+           end
+
+           default: 
+           begin
+           SS1_INDEX_VAL = SS_RES ? 0 :
+           		           RES ? 0 :
+                           SSLD ? (SS1_INDEX_VAL - 1) :
+                           SSST ? (SS1_INDEX_VAL + 1) : 
+                           SS1_INDEX_VAL;
+                           
+		   SS2_INDEX_VAL = SS_RES ? 0 :
+		                   RES ? 0 :
+		                   SS2_INDEX_VAL;
+           end
+       endcase
+       
+		if(SSLD)
+		begin
+		   case (SS_THREAD_SEL)
+			   1: RECOVERY_RA = (REG1[1]^SHADOW_STACK_2[SS2_INDEX_VAL]) != 0 ? SHADOW_STACK_2[SS2_INDEX_VAL] : REG1[1];
+			   default: RECOVERY_RA = (REG1[1]^SHADOW_STACK_1[SS1_INDEX_VAL]) != 0 ? SHADOW_STACK_1[SS1_INDEX_VAL] : REG1[1];
+		   endcase
+		end     
+`endif   
+
+
+
+
 `ifdef __3STAGE__
-	    FLUSH <= RES ? 2 : HLT ? FLUSH :        // reset and halt                              
+	    FLUSH <= (RES) ? 2 : HLT ? FLUSH :        // reset and halt                              
 	                       FLUSH ? FLUSH-1 :                           
 	                       (JAL||JALR||BMUX) ? 2 : 0;  // flush the pipeline!
 `else
-        FLUSH <= RES ? 1 : HLT ? FLUSH :        // reset and halt
+        FLUSH <= (RES) ? 1 : HLT ? FLUSH :        // reset and halt
                        (JAL||JALR||BMUX);  // flush the pipeline!
 `endif
 
+
+
+
+
+
+    `ifdef __RV32E__
+            REG1[DPTR] <=   RES ? (RESMODE[3:0]==2 ? `__RESETSP__ : 0)  :        // reset sp
+    `else
+            REG1[DPTR] <=   RES ? (RESMODE[4:0]==2 ? `__RESETSP__ : 0)  :        // reset sp
+    `endif
+                           HLT ? REG1[DPTR] :        // halt
+                         !DPTR ? 0 :                // x0 = 0, always!
+                         AUIPC ? PC+SIMM :
+                          JAL||
+                          JALR ? NXPC :
+                           LUI ? SIMM :
+                           LCC ? LDATA :
+                          MCC||RCC ? RMDATA:
+    `ifdef __MAC16X16__                  
+                           MAC ? REG2[DPTR]+KDATA :
+    `endif
+    
+    `ifdef __SSTACK__                  
+                           SSLD ? RECOVERY_RA :
+    `endif
+                           //MCC ? MDATA :
+                           //RCC ? RDATA : 
+                           //CCC ? CDATA : 
+                                 REG1[DPTR];
+
+
+
+
+
 `ifdef __RV32E__
-        REG1[DPTR] <=   RES ? (RESMODE[3:0]==2 ? `__RESETSP__ : 0)  :        // reset sp
-`else
-        REG1[DPTR] <=   RES ? (RESMODE[4:0]==2 ? `__RESETSP__ : 0)  :        // reset sp
-`endif
-                       HLT ? REG1[DPTR] :        // halt
-                     !DPTR ? 0 :                // x0 = 0, always!
-                     AUIPC ? PC+SIMM :
-                      JAL||
-                      JALR ? NXPC :
-                       LUI ? SIMM :
-                       LCC ? LDATA :
-                  MCC||RCC ? RMDATA:
-`ifdef __MAC16X16__                  
-                       MAC ? REG2[DPTR]+KDATA :
-`endif
-                       //MCC ? MDATA :
-                       //RCC ? RDATA : 
-                       //CCC ? CDATA : 
-                             REG1[DPTR];
-`ifdef __RV32E__
-        REG2[DPTR] <=   RES ? (RESMODE[3:0]==2 ? `__RESETSP__ : 0) :        // reset sp
+        REG2[DPTR] <=   (RES) ? (RESMODE[3:0]==2 ? `__RESETSP__ : 0) :        // reset sp
 `else        
-        REG2[DPTR] <=   RES ? (RESMODE[4:0]==2 ? `__RESETSP__ : 0) :        // reset sp
+        REG2[DPTR] <=   (RES) ? (RESMODE[4:0]==2 ? `__RESETSP__ : 0) :        // reset sp
 `endif        
                        HLT ? REG2[DPTR] :        // halt
                      !DPTR ? 0 :                // x0 = 0, always!
@@ -423,7 +582,16 @@ module darkriscv
                   MCC||RCC ? RMDATA:
 `ifdef __MAC16X16__
                        MAC ? REG2[DPTR]+KDATA :
-`endif                       
+
+`endif
+`ifdef __MOD__
+                       MOD ? REG2[DPTR]<=KDATA2 :
+
+`endif          
+    `ifdef __SSTACK__                  
+                       SSLD ? RECOVERY_RA :
+    `endif
+              
                        //MCC ? MDATA :
                        //RCC ? RDATA : 
                        //CCC ? CDATA : 
@@ -435,31 +603,36 @@ module darkriscv
 
         NXPC <= /*RES ? `__RESETPC__ :*/ HLT ? NXPC : NXPC2[XMODE];
 
-        NXPC2[RES ? RESMODE[0] : XMODE] <=  RES ? `__RESETPC__ : HLT ? NXPC2[XMODE] :   // reset and halt
+        NXPC2[(RES) ? RESMODE[0] : XMODE] <=  (RES) ? `__RESETPC__ : HLT ? NXPC2[XMODE] :   // reset and halt
                                       JREQ ? JVAL :                            // jmp/bra
 	                                         NXPC2[XMODE]+4;                   // normal flow
 
-        XMODE <= RES ? 0 : HLT ? XMODE :        // reset and halt
+        XMODE <= (RES) ? 0 : HLT ? XMODE :        // reset and halt
 	             XMODE==0&& IREQ&&(JAL||JALR||BMUX) ? 1 :         // wait pipeflush to switch to irq
                  XMODE==1&&!IREQ&&(JAL||JALR||BMUX) ? 0 : XMODE;  // wait pipeflush to return from irq
 
 `else
         NXPC <= /*RES ? `__RESETPC__ :*/ HLT ? NXPC : NXPC2;
 	
-	    NXPC2 <=  RES ? `__RESETPC__ : HLT ? NXPC2 :   // reset and halt
+	    NXPC2 <=  (RES) ? `__RESETPC__ : HLT ? NXPC2 :   // reset and halt
 	                 JREQ ? JVAL :                    // jmp/bra
 	                        NXPC2+4;                   // normal flow
 
 `endif
 
 `else
-        NXPC <= RES ? `__RESETPC__ : HLT ? NXPC :   // reset and halt
+        NXPC <= (RES) ? `__RESETPC__ : HLT ? NXPC :   // reset and halt
               JREQ ? JVAL :                   // jmp/bra
                      NXPC+4;                   // normal flow
 `endif
         PC   <= /*RES ? `__RESETPC__ :*/ HLT ? PC : NXPC; // current program counter
     end
 
+
+
+
+         
+            
     // IO and memory interface
 
     assign DATAO = SDATA; // SCC ? SDATA : 0;
@@ -487,7 +660,13 @@ module darkriscv
 `else
     assign IADDR = NXPC;
 `endif
+ 
+    //assign DEBUG = { (RES || SS_RES), |FLUSH, WR, RD };
+    
+    assign DEBUG = SS_THREAD_SEL;//SS1_INDEX_VAL;
 
-    assign DEBUG = { RES, |FLUSH, WR, RD };
+
+   // assign SS_INDEX = SS_INDEX_VAL;  
+
 
 endmodule

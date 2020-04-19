@@ -64,7 +64,7 @@
 // (instruction per clock = 1).  of course, read operations require 1
 // wait-state, which means sometimes the read performance is reduced.
 
-`define __3STAGE__
+//`define __3STAGE__
 
 // muti-threading support:
 //
@@ -75,7 +75,7 @@
 // performance impact.  Note: threading is currently supported only in the
 // 3-stage pipeline version.
 
-`define __THREADING__ 
+//`define __THREADING__
 
 // performance measurement:
 //
@@ -98,13 +98,15 @@
 
 `define __MAC16X16__
 
+`define __SSTACK__
+
 // RV32I vs RV32E:
 //
 // The difference between the RV32I and RV32E regarding the logic space is 
 // minimal in typical applications with modern 5 or 6 input LUT based FPGAs, 
 // but the RV32E is better with old 4 input LUT based FPGAs.
 
-`define __RV32E__
+//`define __RV32E__
 
 // initial PC and SP
 //
@@ -115,6 +117,24 @@
 // RAM memory matches with the .data and other volatile data, in a way that
 // the stack can be positioned in the top of RAM and does not match with the
 // .data.
+
+//`define __HARVARD__
+
+// full harvard architecture:
+// 
+// When defined, enforses that the instruction and data buses are connected
+// to fully separate memory banks.  Although the darkriscv always use
+// harvard architecture in the core, with separate instruction and data
+// buses, the logic levels outside the core can use different architectures
+// and concepts, including von neumann, wich a single bus shared by
+// instruction and data access, as well a mix between harvard and von
+// neumann, which is possible in the case of dual-port blockrams, where is
+// possible connect two separate buses in a single memory bank.  the main
+// advantage of a single memory bank is that the .text and .data areas can
+// be better allocated, but in this case is not possible protect the .text
+// area as in the case of separate memory banks.
+//
+// for spartan-7 devices, always use full harvard architecture!
 
 `define __RESETPC__ 32'd0
 `define __RESETSP__ 32'd8192
@@ -172,6 +192,16 @@
 `ifdef QMTECH_SDRAM_LX16
     `define BOARD_ID 3
     `define BOARD_CK 50000000
+    `define INVRES 1
+`endif
+
+`ifdef QMTECH_SPARTAN7_S15
+    `define BOARD_ID 4
+    `define BOARD_CK_REF 50000000 
+    `define BOARD_CK_MUL 20
+    `define BOARD_CK_DIV 10
+    `define VIVADO 1 
+    `define INVRES 1
 `endif
 
 `ifndef BOARD_ID

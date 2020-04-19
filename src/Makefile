@@ -33,19 +33,20 @@ endif
 
 ifndef CROSS
 
-    ARCH = rv32e
+    ARCH = rv32i
+	#ABI = ilp32e
     #ARCH = rv32i
     
     #TODO: better way to switch little/big-endian:
     #ENDIAN = _le # gcc for little-endian
     #ENDIAN = _be # gcc for big-endian
 
-    CROSS = riscv32-embedded$(ENDIAN)-elf
+    CROSS = riscv32-unknown$(ENDIAN)-elf
     #CROSS = riscv-elf
     #CROSS = riscv32-unknown-elf
     #CROSS = riscv32-embedded-elf
     
-    CCPATH = /usr/local/share/gcc-$(CROSS)/bin/
+    CCPATH = /opt/riscv-exp/bin
     #CCPATH = /usr/local/share/toolchain-$(CROSS)/bin    
 endif
 
@@ -59,7 +60,7 @@ endif
     OC = $(CCPATH)/$(CROSS)-objcopy
     OD = $(CCPATH)/$(CROSS)-objdump
 
-CCFLAGS = -Wall -I./include -Os -fomit-frame-pointer -march=$(ARCH) -D__RISCV__ -DBUILD="\"$(BUILD)\"" -DARCH="\"$(ARCH)\""
+CCFLAGS = -Wall -I./include -Os -fomit-frame-pointer -march=$(ARCH) -mabi=ilp32e -D__RISCV__ -DBUILD="\"$(BUILD)\"" -DARCH="\"$(ARCH)\""
 ASFLAGS = -march=$(ARCH)
 LDFLAGS = -T$(PROJ).ld -Map=$(PROJ).map # -Ttext=0
 
@@ -76,7 +77,7 @@ SRCS = boot.c stdio.c main.c io.c banner.c
 all:
 	make $(PROJ).rom
 	make $(PROJ).ram
-	#make $(PROJ).bin
+	make $(PROJ).bin
 	#make $(PROJ).x86
 
 clean:

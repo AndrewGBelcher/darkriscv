@@ -277,6 +277,19 @@ int mac(int acc,short x,short y)
     return acc;
 }
 
+int mod(int acc,int x,int y)
+{
+#ifdef __RISCV__
+    __asm__(".word 0x00c5857e"); // mac a0,a1,a2
+    // "template"
+    //acc += (x^y);
+#else
+    acc=x%y;
+#endif
+    return acc;
+}
+
+
 unsigned __umulsi3(unsigned x,unsigned y)
 {
     unsigned acc;

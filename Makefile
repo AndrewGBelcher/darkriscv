@@ -33,18 +33,21 @@
 # makefiles. Of course, you need first set the GCC compiler path/name, the
 # simulator path/name and the board model:
 #
-   ARCH = rv32e
+   ARCH = rv32i
+#	ABI = ilp32e
 #  ARCH = rv32i
 #ENDIAN = _le
 #ENDIAN = _be
 # CROSS = riscv-elf
-# CROSS = riscv32-unknown-elf
+ CROSS = riscv32-unknown-elf
 # CROSS = riscv32-embedded-elf
-  CROSS = riscv32-embedded$(ENDIAN)-elf
-#CCPATH = /usr/local/share/toolchain-$(CROSS)/bin
- CCPATH = /usr/local/share/gcc-$(CROSS)/bin/
+#  CROSS = riscv32-embedded$(ENDIAN)-elf
+  CCPATH = /opt/riscv-exp/bin
+# CCPATH = /usr/local/share/gcc-$(CROSS)/bin/
  ICARUS = /usr/local/bin/iverilog
- BOARD  = avnet_microboard_lx9
+ #BOARD  = avnet_microboard_lx9
+BOARD = qmtech_spartan7_s15
+		
 #BOARD  = xilinx_ac701_a200
 #BOARD  = qmtech_sdram_lx16
 #
@@ -59,7 +62,7 @@ default: all
 
 all:
 	make -C src darksocv.rom    CROSS=$(CROSS) CCPATH=$(CCPATH) ARCH=$(ARCH)
-	make -C src darksocv.ram    CROSS=$(CROSS) CCPATH=$(CCPATH) ARCH=$(ARCH)
+	make -C src darksocv.ram    CROSS=$(CROSS) CCPATH=$(CCPATH) ARCH=$(ARCH) 
 	make -C sim all             ICARUS=$(ICARUS) 
 	make -C boards all          BOARD=$(BOARD)
 

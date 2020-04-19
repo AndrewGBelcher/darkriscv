@@ -38,63 +38,41 @@ unsigned int   ip   = 0xAC100001; // 172.16.0.1
 unsigned short port = 0x0c38;     // 3128
 unsigned short opts = 0xABCD;
 
+int test_call(void)
+{
+	asm volatile("ssst");
+	// ra should be recovered when it fails authentication
+	asm volatile("lui ra,44");
+	asm volatile("ssld");
+}
+
 int main(void)
 {
-    banner();
+    //banner();
+
 
     // startup
 
-    printf("board: %s (id=%d)\n",board_name[io.board_id],io.board_id);
-    printf("build: darkriscv fw build %s\n",BUILD);
+    //printf("board: %s (id=%d)\n",board_name(io.board_id),io.board_id);
+   // printf("build: darkriscv fw build %s\n",BUILD);
 
-    printf("core0: darkriscv@%d.%dMHz with %s%s%s\n",
-        io.board_cm,                        // board clock MHz
-        io.board_ck,                        // board clock kHz
-        ARCH,                               // architecture
-        threads>1?"+MT":"",                 //  MT support
-        mac(1000,16,16)==1256?"+MAC":"");   // MAC support
+   // printf("core0: darkriscv@%d.%dMHz with %s%s%s\n",
+     //   io.board_cm,                        // board clock MHz
+     //   io.board_ck,                        // board clock kHz
+     //   ARCH,                               // architecture
+     //   threads>1?"+MT":"",                 //  MT support
+     //   mac(1000,16,16)==1256?"+MAC":"");   // MAC support
 
+				char* str = "\nDarkRiscv!\n\n";
+								putstr(str);
     threads = 0; // prepare for the next restart
 
-    printf("uart0: 115200 bps (div=%d)\n",io.uart.baud);
-    printf("timr0: periodic timer=%dHz (io.timer=%d)\n",(io.board_cm*1000000u+io.board_ck*1000u)/(io.timer+1),io.timer);
-    printf("\n");
+  //  printf("uart0: 115200 bps (div=%d)\n",io.uart.baud);
+   // printf("timr0: periodic timer=%dHz (io.timer=%d)\n",(io.board_cm*1000000u+io.board_ck*1000u)/(io.timer+1),io.timer);
+   // printf("\n");
 
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-    printf("endian-test (big-endian):\n");
-#else
-    printf("endian-test (little-endian):\n");
-#endif
+   // printf("Welcome to DarkRISCV!\n");
 
-
-    struct
-    {
-        unsigned int   ref;
-        unsigned int   ip;
-        unsigned short port;
-        unsigned char  opt_a;
-        unsigned char  opt_b;
-    } 
-    data;
-
-    data.ref  = 0x12345678;
-    data.ip   = ip;
-    data.port = port;
-    data.opt_a = 0xA;
-    data.opt_b = 0xB;
-
-    unsigned char *p = (unsigned char *)&data;
-
-    printf("ip:port=%d.%d.%d.%d:%d\n",p[4],p[5],p[6],p[7],data.port);
-
-    printf("data.ref  = %x %x %x %x = %x\n",p[0],p[1],p[2],p[3],data.ref);
-    printf("data.ip   = %x %x %x %x = %x\n",p[4],p[5],p[6],p[7],data.ip);
-    printf("data.port = %x %x = %x/%d\n",p[8],p[9], data.port, data.port);
-    printf("data.opts = %x %x = %x %x\n",p[10],p[11],data.opt_a,data.opt_b);
-
-    printf("\n");
-
-    printf("Welcome to DarkRISCV!\n");
 
     // main loop
 
@@ -102,7 +80,7 @@ int main(void)
     {
         char  buffer[64];
 
-        printf("> ");
+        //printf("> ");
         memset(buffer,0,sizeof(buffer));
         gets(buffer,sizeof(buffer));
         
@@ -117,13 +95,13 @@ int main(void)
         {
           if(!strcmp(argv[0],"clear"))
           {
-              printf("\33[H\33[2J");
+          //    printf("\33[H\33[2J");
           }
           else
           if(!strcmp(argv[0],"atros"))
           {
               banner();
-              printf("wow! hello atros! o/\n");
+          //    printf("wow! hello atros! o/\n");
           }
           else
           if(!strcmp(argv[0],"dump"))
@@ -134,9 +112,9 @@ int main(void)
               
               for(i=0;i!=16;i++)
               {
-                  printf("%x: ",(unsigned) p);
+           //       printf("%x: ",(unsigned) p);
               
-                  for(j=0;j!=16;j++) printf("%x ",p[j]);
+            //      for(j=0;j!=16;j++) printf("%x ",p[j]);
                   for(j=0;j!=16;j++) putchar((p[j]>=32&&p[j]<127)?p[j]:'.');
 
                   putchar('\n');
@@ -156,46 +134,46 @@ int main(void)
                   kp++;
               }
           
-              printf("%x: ",k=xtoi(argv[vp++]));
+             // printf("%x: ",k=xtoi(argv[vp++]));
               
               for(j=0;i--;j++)
               {
                   if(argv[0][0]=='r')
                   {
-                      if(argv[0][kp]=='b') printf("%x ",j[(char  *)k]);
-                      if(argv[0][kp]=='w') printf("%x ",j[(short *)k]);
-                      if(argv[0][kp]=='l') printf("%x ",j[(int   *)k]);
+                //      if(argv[0][kp]=='b') printf("%x ",j[(char  *)k]);
+                //      if(argv[0][kp]=='w') printf("%x ",j[(short *)k]);
+               //       if(argv[0][kp]=='l') printf("%x ",j[(int   *)k]);
                   }
                   else
                   {
                       w = xtoi(argv[vp++]);
-                      if(argv[0][kp]=='b') printf("%x ",j[(char  *)k]=w);
-                      if(argv[0][kp]=='w') printf("%x ",j[(short *)k]=w);
-                      if(argv[0][kp]=='l') printf("%x ",j[(int   *)k]=w);
+                 ///     if(argv[0][kp]=='b') printf("%x ",j[(char  *)k]=w);
+                 //     if(argv[0][kp]=='w') printf("%x ",j[(short *)k]=w);
+                 //     if(argv[0][kp]=='l') printf("%x ",j[(int   *)k]=w);
                   }
               }
-              printf("\n");
+            //  printf("\n");
           }
           else
           if(!strcmp(argv[0],"led"))
           {
               if(argv[1]) io.led = xtoi(argv[1]);
               
-              printf("led = %x\n",io.led);
+           //  printf("led = %x\n",io.led);
           }
           else
           if(!strcmp(argv[0],"timer"))
           {
               if(argv[1]) io.timer = atoi(argv[1]);
               
-              printf("timer = %d\n",io.timer);
+             // printf("timer = %d\n",io.timer);
           }
           else
           if(!strcmp(argv[0],"gpio"))
           {
               if(argv[1]) io.gpio = xtoi(argv[1]);
 
-              printf("gpio = %x\n",io.gpio);
+            //  printf("gpio = %x\n",io.gpio);
           }
           else
           if(!strcmp(argv[0],"mul"))
@@ -203,7 +181,7 @@ int main(void)
               int x = atoi(argv[1]);
               int y = atoi(argv[2]);
               
-              printf("mul = %d\n",x*y);
+            //  printf("mul = %d\n",x*y);
           }
           else
           if(!strcmp(argv[0],"div"))
@@ -211,7 +189,7 @@ int main(void)
               int x = atoi(argv[1]);
               int y = atoi(argv[2]);
 
-              printf("div = %d, mod = %d\n",x/y,x%y);
+            //  printf("div = %d, mod = %d\n",x/y,x%y);
           }
           else
           if(!strcmp(argv[0],"mac"))
@@ -220,16 +198,129 @@ int main(void)
               int x = atoi(argv[2]);
               int y = atoi(argv[3]);
 
-              printf("mac = %d\n",mac(acc,x,y));
+           //   printf("mac = %d\n",mac(acc,x,y));
           }
+/*           else
+		  if(!strcmp(argv[0],"mod"))
+          {
+              int acc;
+              int a = atoi(argv[1]);
+              int b = atoi(argv[2]);
+
+              printf("mod = %d\n from acc=%d a=%d b=%d\n",mod(acc,a,b), acc, a, b);
+
+/* 			  asm volatile
+			  (
+				"mod   %[z], %[x], %[y]\n\t"
+				: [z] "=r" (acc)
+				: [x] "r" (a), [y] "r" (b)
+
+			  );
+			printf("mod = %d\n",acc); 
+
+
+          }      
+ */
+   
           else
+		  if(!strcmp(argv[0],"sstest"))
+          {
+		//	printf("\nrunning ss assembly tests\n");
+			int d = 0;
+			for(int i=0; i<10000; i++)d=d*i;
+/*
+			if(!strcmp(argv[1],"1"))
+			{
+				asm volatile("ssst");
+				// function execution would be here
+				asm volatile("ssld");
+			}
+
+			else if(!strcmp(argv[1],"2"))
+			{
+				asm volatile("lui ra,33");
+				asm volatile("ssst");
+
+				// function execution would be here
+				asm volatile("lui ra,22");
+				asm volatile("ssst");
+
+				// function execution would be here
+				asm volatile("ssld");
+
+				asm volatile("lui ra,33");
+				asm volatile("ssld");
+			}
+
+			else if(!strcmp(argv[1],"3"))
+			{
+				asm volatile("lui ra,33");
+				asm volatile("ssst");
+
+				// function execution would be here
+				asm volatile("lui ra,44");
+				asm volatile("ssld");
+			}*/
+
+			if(!strcmp(argv[1],"call"))
+			{
+				test_call();
+				char* string = "\nrecovery worked!\n\n";
+				putstr(string);
+
+			}
+/*
+			else if(!strcmp(argv[1],"th"))
+			{
+				
+				//	int thread_sel = atoi(argv[2]);
+				//	//asm volatile ("ssth #" STRINGIFY(thread_sel));
+				//	short instrs[2];
+			//		instrs[0] = (short)(0x7b);
+				//	instrs[1] = (short)(thread_sel);
+				//	((void(*)(void))((int)instrs | 1))();
+				asm volatile("ssth 1");
+
+					printf("ssth passed\n");
+				
+			}
+			else if(!strcmp(argv[1],"th_bounds"))
+			{
+
+				asm volatile("ssth 2");
+
+					printf("ssth passed\n");
+				
+			}
+
+			else if(!strcmp(argv[1],"st_bounds"))
+			{
+				for(int i = 0; i < 257; i++)
+				{
+					asm volatile("ssst");
+					printf("on st:%d\n", i);
+				}
+			}
+			else if(!strcmp(argv[1],"st"))
+			{
+				asm volatile("ssst");
+			}
+
+			else if(!strcmp(argv[1],"ld"))
+			{
+				asm volatile("ssld");
+			}*/
+			//printf("\nss assembly tests done\n"); 
+          }      
+   
+		  else
           if(argv[0][0])
           {
-              printf("command: [%s] not found.\n"
-                     "valid commands: clear, dump <hex>, led <hex>, timer <dec>, gpio <hex>\n"
-                     "                mul <dec> <dec>, div <dec> <dec>, mac <dec> <dec> <dec>\n"
-                     "                rd[m][bwl] <hex> [<hex> when m], wr[m][bwl] <hex> <hex> [<hex> when m]\n",
-                     argv[0]);
+          //    printf("command: [%s] not found.\n"
+        //             "valid commands: clear, dump <hex>, led <hex>, timer <dec>, gpio <hex>\n"
+        //             "                mul <dec> <dec>, div <dec> <dec>, mac <dec> <dec> <dec>\n"
+        //             "                rd[m][bwl] <hex> [<hex> when m], wr[m][bwl] <hex> <hex> [<hex> when m]\n",
+        //             argv[0]);
           }
        }
     }
