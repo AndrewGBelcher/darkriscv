@@ -93,6 +93,7 @@
     `define BOARD_CK 100000000   
 `endif
 */
+
 module darksocv
 (
     input        XCLK,      // external clock
@@ -101,10 +102,7 @@ module darksocv
     input        UART_RXD,  // UART receive line
     output       UART_TXD,  // UART transmit line
 
-    output [3:0] LED,//,       // on-board leds
-    input       rtcsig,
-    output      trigger
-   // output [3:0] DEBUG      // osciloscope
+    output [3:0] LED        //,       // on-board leds
 );
 
 
@@ -117,6 +115,7 @@ module darksocv
     always@(posedge XCLK) IRES <= XRES==1 ? -1 : IRES[7] ? IRES-1 : 0; // reset low
 `else
     always@(posedge XCLK) IRES <= XRES==0 ? -1 : IRES[7] ? IRES-1 : 0; // reset high
+    
     // IRES == 1 then reset
     // xres == 0 everything is fine
     // then if IRES[7] is 1 then case is -1 or 0 for IRES
@@ -198,8 +197,6 @@ module darksocv
     
      //   always@(posedge XCLK) IRES <= XRES==0 ? -1 : IRES[7] ? IRES-1 : 0; // reset high
 
-
-
     wire CLK = XCLK;
     wire RES = IRES[7];// || BOARD_IRQ[6];    
 `endif
@@ -232,13 +229,11 @@ module darksocv
     wire [31:0] DATAI;
     wire        WR,RD;
     wire [3:0]  BE;
-
     wire [31:0] IOMUX [0:3];
-
+    wire HLT;
+    
     reg  [15:0] GPIOFF = 0;
     reg  [15:0] LEDFF  = 0;
-    
-    wire HLT;
     
 `ifdef __ICACHE__
 
@@ -261,6 +256,7 @@ module darksocv
 
     always@(posedge CLK)
     begin
+    
         ROMFF <= ROM[IADDR[11:2]];
 
         if(IFFX2)
@@ -612,7 +608,6 @@ module darksocv
         .BE(BE),
         .WR(WR),
         .RD(RD),
-        //.PAC_IRQ(BOARD_IRQ[6]),
         .DEBUG(KDEBUG)
     );
 
@@ -624,56 +619,8 @@ module darksocv
   end
 `endif
 
-    //assign LED   = KDEBUG[3:0];//LEDFF[3:0];
-        assign LED   = KDEBUG[3:0];// BOARD_IRQ[6];//LEDFF[3:0];
-        assign BOARD_IRQ[6] = XRES==0 ? 0 : BOARD_IRQ[6]; // reset low
-        
-        //assign CS_cell = gate ? 1'bz : CS_sc;
+    assign LED   = KDEBUG[3:0];
+    assign BOARD_IRQ[6] = XRES==0 ? 0 : BOARD_IRQ[6]; // reset low
 
 
-    //assign DEBUG = { GPIOFF[0], XTIMER, WR, RD }; // UDEBUG;
-
-
-
-
-    reg detected = 0;
-    reg drive_cnt = 0;
-    reg [64:0]clk_cnt = 0;
-    
-    always@(negedge rtcsig)
-    begin
-    
-       if(drive_cnt==1)
-        begin
-            detected = 1;
-        end
-        
-        else
-        begin
-            detected = 0;
-        end
-
-        drive_cnt = ~drive_cnt;
-    end
-
-/*
-    always@(posedge XCLK)
-    begin
-    
-        if(detected)
-        begin
-            clk_cnt = clk_cnt + 1;
-        end
-        
-        else
-        begin
-            clk_cnt = 0;
-        end
-        
-    end*/
-    
-   assign trigger = detected ? 1 : 0;
-
-//    assign trigger = (clk_cnt > 8500000) ? 1 : 0;
-    //assign trigger = XCLK;
 endmodule

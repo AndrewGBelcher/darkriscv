@@ -518,50 +518,37 @@ mac:
 	ret
 	.size	mac, .-mac
 	.align	2
-	.globl	mod
-	.type	mod, @function
-mod:
-	ssst
- #APP
-# 283 "stdio.c" 1
-	.word 0x00c5857e
-# 0 "" 2
- #NO_APP
-	ssld
-	ret
-	.size	mod, .-mod
-	.align	2
 	.globl	__umulsi3
 	.type	__umulsi3, @function
 __umulsi3:
 	ssst
 	mv	a5,a0
-	bltu	a0,a1,.L125
+	bltu	a0,a1,.L123
 	li	a0,0
-.L119:
-	beq	a1,zero,.L117
+.L117:
+	beq	a1,zero,.L115
 	andi	a4,a1,1
-	beq	a4,zero,.L123
+	beq	a4,zero,.L121
 	add	a0,a0,a5
-.L123:
+.L121:
 	slli	a5,a5,1
 	srli	a1,a1,1
-	j	.L119
-.L121:
+	j	.L117
+.L119:
 	andi	a4,a5,1
-	beq	a4,zero,.L120
+	beq	a4,zero,.L118
 	add	a0,a0,a1
-.L120:
+.L118:
 	srli	a5,a5,1
 	slli	a1,a1,1
-.L118:
-	bne	a5,zero,.L121
-.L117:
+.L116:
+	bne	a5,zero,.L119
+.L115:
 	ssld
 	ret
-.L125:
+.L123:
 	li	a0,0
-	j	.L118
+	j	.L116
 	.size	__umulsi3, .-__umulsi3
 	.align	2
 	.globl	__mulsi3
@@ -573,19 +560,19 @@ __mulsi3:
 	sw	ra,8(sp)
 	sw	s0,4(sp)
 	li	s1,0
-	bge	a0,zero,.L134
+	bge	a0,zero,.L132
 	neg	a0,a0
 	li	s1,1
-.L134:
+.L132:
 	li	s0,0
-	bge	a1,zero,.L135
+	bge	a1,zero,.L133
 	neg	a1,a1
 	li	s0,1
-.L135:
-	call	__umulsi3
-	beq	s1,s0,.L133
-	neg	a0,a0
 .L133:
+	call	__umulsi3
+	beq	s1,s0,.L131
+	neg	a0,a0
+.L131:
 	lw	s0,4(sp)
 	lw	ra,8(sp)
 	lw	s1,0(sp)
@@ -601,32 +588,32 @@ __udiv_umod_si3:
 	mv	a5,a0
 	li	a4,1
 	mv	a0,a1
-	bne	a1,zero,.L144
-.L143:
+	bne	a1,zero,.L142
+.L141:
 	ssld
 	ret
-.L145:
+.L143:
 	slli	a4,a4,1
 	slli	a0,a0,1
-.L144:
-	bgtu	a5,a0,.L145
+.L142:
+	bgtu	a5,a0,.L143
 	mv	a3,a0
 	li	a0,0
+.L144:
+	beq	a5,zero,.L146
+	bne	a4,zero,.L147
 .L146:
-	beq	a5,zero,.L148
-	bne	a4,zero,.L149
-.L148:
-	bne	a2,zero,.L143
+	bne	a2,zero,.L141
 	mv	a0,a5
-	j	.L143
-.L149:
-	bltu	a5,a3,.L147
+	j	.L141
+.L147:
+	bltu	a5,a3,.L145
 	sub	a5,a5,a3
 	add	a0,a0,a4
-.L147:
+.L145:
 	srli	a4,a4,1
 	srli	a3,a3,1
-	j	.L146
+	j	.L144
 	.size	__udiv_umod_si3, .-__udiv_umod_si3
 	.align	2
 	.globl	__udivsi3
@@ -648,7 +635,7 @@ __umodsi3:
 	.globl	__div_mod_si3
 	.type	__div_mod_si3, @function
 __div_mod_si3:
-	beq	a1,zero,.L175
+	beq	a1,zero,.L173
 	ssst
 	addi	sp,sp,-16
 	sw	s0,8(sp)
@@ -656,24 +643,24 @@ __div_mod_si3:
 	sw	ra,12(sp)
 	mv	s0,a2
 	li	s1,0
-	bge	a0,zero,.L163
+	bge	a0,zero,.L161
 	neg	a0,a0
 	li	s1,1
-.L163:
+.L161:
 	li	a5,0
-	bge	a1,zero,.L164
+	bge	a1,zero,.L162
 	neg	a1,a1
 	li	a5,1
-.L164:
+.L162:
 	mv	a2,s0
 	sw	a5,0(sp)
 	call	__udiv_umod_si3
 	mv	a1,a0
-	beq	s0,zero,.L165
+	beq	s0,zero,.L163
 	lw	a5,0(sp)
-	beq	s1,a5,.L162
+	beq	s1,a5,.L160
 	neg	a1,a0
-.L162:
+.L160:
 	lw	s0,8(sp)
 	lw	ra,12(sp)
 	lw	s1,4(sp)
@@ -681,11 +668,11 @@ __div_mod_si3:
 	addi	sp,sp,16
 	ssld
 	jr	ra
-.L165:
-	beq	s1,zero,.L162
+.L163:
+	beq	s1,zero,.L160
 	neg	a1,a0
-	j	.L162
-.L175:
+	j	.L160
+.L173:
 	mv	a0,a1
 	ret
 	.size	__div_mod_si3, .-__div_mod_si3

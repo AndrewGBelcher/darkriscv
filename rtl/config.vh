@@ -64,7 +64,7 @@
 // (instruction per clock = 1).  of course, read operations require 1
 // wait-state, which means sometimes the read performance is reduced.
 
-//`define __3STAGE__
+`define __3STAGE__
 
 // muti-threading support:
 //
@@ -75,7 +75,7 @@
 // performance impact.  Note: threading is currently supported only in the
 // 3-stage pipeline version.
 
-//`define __THREADING__
+`define __THREADING__
 
 // performance measurement:
 //
@@ -98,7 +98,22 @@
 
 `define __MAC16X16__
 
+
+
 `define __SSTACK__
+// Shadow Stack support
+//
+// The use of a shadow stack for return address authentication.
+// If a return address becomes corrupted, the return address register
+// will be restored with an internally saved return address within
+// a shadow stack.
+// Supported in threading mode via a 2nd shadow stack and stack index.
+// The scheduler must set the stack selection to match the currently used 
+// thread via ssth imm[32:12] where the immediate value represents the index.
+//
+// Code must be compiled with xsstack non-standard extension via the fork of riscv-gnu-toolchain
+// which can be found at https://github.com/AndrewGBelcher/riscv-gnu-toolchain
+
 
 // RV32I vs RV32E:
 //
@@ -118,7 +133,7 @@
 // the stack can be positioned in the top of RAM and does not match with the
 // .data.
 
-//`define __HARVARD__
+`define __HARVARD__
 
 // full harvard architecture:
 // 

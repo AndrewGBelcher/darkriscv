@@ -31,21 +31,8 @@ boot:
 	j	.L3
 .L2:
 	lw	a4,0(sp)
-	li	a3,625
 	sw	a4,12(a5)
 .L4:
-	mv	a4,a3
- #APP
-# 44 "boot.c" 1
-	1: nop             
-   nop             
-   nop             
-   nop             
-   addi a4, a4, -1 
-   bnez a4, 1b     
-
-# 0 "" 2
- #NO_APP
 	lhu	a4,8(a5)
 	slli	a4,a4,16
 	srli	a4,a4,16

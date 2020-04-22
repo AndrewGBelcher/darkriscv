@@ -6,53 +6,74 @@
 	.text
 	.section	.rodata.str1.4,"aMS",@progbits,1
 	.align	2
-.LC1:
-	.string	"\033[H\033[2J"
-	.align	2
 .LC0:
-	.ascii	" \016v \n\001 \022v\034\n\001"
-	.string	"r\r \007v\032\n\001r\020 \006v\030\n\001r\022 \004v\030\n\001r\022 \004v\030\n\001r\022 \004v\030\n\001r\020 \006v\026 \002\n\001r\r \007v\026 \004\n\001r\002 \020v\026 \006\n\001r\002 \fv\030 \006r\002\n\001r\004 \006v\032 \006r\004\n\001r\006 \006v\026 \006r\006\n\001r\b \006v\022 \006r\b\n\001r\n \006v\016 \006r\n\n\001r\f \006v\n \006r\f\n\001r\016 \006v\006 \006r\016\n\001r\020 \006v\002 \006r\020\n\001r\022 \nr\022\n\001r\024 \006r\024\n\001r\026 \002r\026\n\002 \007I\001U\001S\001T\001R\001U\001C\001T\001I\001O\001N\001 \001S\001E\001T\001S\001 \001W\001A\001N\001T\001 \001T\001O\001 \001B\001E\001 \001F\001R\001E\002\n\002"
+	.string	"  char rle_logo[] = {"
+	.align	2
+.LC1:
+	.ascii	"              vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n            "
+	.ascii	"      vvvvvvvvvvvvvvvvvvvvvvvvvvvv\nrrrrrrrrrrrrr       vvvv"
+	.ascii	"vvvvvvvvvvvvvvvvvvvvvv\nrrrrrrrrrrrrrrrr      vvvvvvvvvvvvvv"
+	.ascii	"vvvvvvvvvv\nrrrrrrrrrrrrrrrrrr    vvvvvvvvvvvvvvvvvvvvvvvv\n"
+	.ascii	"rrrrrrrrrrrrrrrrrr    vvvvvvvvvvvvvvvvvvvvvvvv\nrrrrrrrrrrrr"
+	.ascii	"rrrrrr    vvvvvvvvvvvvvvvvvvvvvvvv\nrrrrrrrrrrrrrrrr      vv"
+	.ascii	"vvvvvvvvvvvvvvvvvvvv  \nrrrrrrrrrrrrr       vvvvvvvvvvvvvvvv"
+	.ascii	"vvvvvv    \nrr                vvvvvvvvvvvvvvvvvvvvvv      \n"
+	.ascii	"rr            vvvvvvvvvvvvvvvvvvvvvvvv      rr\nrrrr      vv"
+	.ascii	"vvvvvvvvvvvvvvvvvvvvvvvv      rrrr\nrrrrrr      vvvvvvvvvvvv"
+	.ascii	"vvvvvvvvvv      rrrrrr\nrrrrrrrr      vvvvvvvvvvvvvvvvvv    "
+	.ascii	"  rrrrrrrr\nrrrrrrrrrr      vvvvvvvvvvvvvv      rrrrrrrrrr\n"
+	.ascii	"rrrrrrrrrrrr      vvvvvvvvvv      rrrrrrrrrrrr\nrrrrrrrrrrrr"
+	.ascii	"rr      v"
+	.string	"vvvvv      rrrrrrrrrrrrrr\nrrrrrrrrrrrrrrrr      vv      rrrrrrrrrrrrrrrr\nrrrrrrrrrrrrrrrrrr          rrrrrrrrrrrrrrrrrr\nrrrrrrrrrrrrrrrrrrrr      rrrrrrrrrrrrrrrrrrrr\nrrrrrrrrrrrrrrrrrrrrrr  rrrrrrrrrrrrrrrrrrrrrr\n\n       INSTRUCTION SETS WANT TO BE FREE\n\n"
+	.align	2
+.LC2:
+	.string	"0x%x, 0x%x, "
+	.align	2
+.LC3:
+	.string	"0x00 };"
 	.text
 	.align	2
 	.globl	banner
 	.type	banner, @function
 banner:
 	ssst
-	addi	sp,sp,-288
-	lui	a1,%hi(.LC0)
-	li	a2,269
-	addi	a1,a1,%lo(.LC0)
-	addi	a0,sp,4
-	sw	ra,284(sp)
-	sw	s0,280(sp)
-	sw	s1,276(sp)
-	call	memcpy
-	lui	a0,%hi(.LC1)
-	addi	a0,a0,%lo(.LC1)
+	lui	a0,%hi(.LC0)
+	addi	sp,sp,-12
+	addi	a0,a0,%lo(.LC0)
+	sw	s0,4(sp)
+	sw	ra,8(sp)
+	sw	s1,0(sp)
+	lui	s0,%hi(.LC1)
+	call	puts
+	addi	s0,s0,%lo(.LC1)
+	li	a2,0
+	li	a1,0
+	lui	a5,%hi(.LC2)
+.L6:
+	lbu	s1,0(s0)
+	beq	s1,a1,.L2
+	beq	a1,zero,.L3
+	addi	a0,a5,%lo(.LC2)
 	call	printf
-	li	a0,10
-	call	putchar
-	addi	s0,sp,4
-.L2:
-	lbu	a5,0(s0)
-	bne	a5,zero,.L5
-	lw	s0,280(sp)
-	lw	ra,284(sp)
-	lw	s1,276(sp)
-	addi	sp,sp,288
-	ssld
-	jr	ra
-.L5:
-	lbu	s1,1(s0)
-	addi	s0,s0,2
+	lui	a5,%hi(.LC2)
 .L3:
-	addi	s1,s1,-1
-	li	a4,-1
-	beq	s1,a4,.L2
-	mv	a0,a5
-	sw	a5,0(sp)
-	call	putchar
-	lw	a5,0(sp)
-	j	.L3
+	beq	s1,zero,.L4
+	li	a2,1
+.L5:
+	addi	s0,s0,1
+	mv	a1,s1
+	j	.L6
+.L2:
+	addi	a2,a2,1
+	mv	s1,a1
+	j	.L5
+.L4:
+	lw	s0,4(sp)
+	lw	ra,8(sp)
+	lw	s1,0(sp)
+	lui	a0,%hi(.LC3)
+	addi	a0,a0,%lo(.LC3)
+	addi	sp,sp,12
+	tail	puts
 	.size	banner, .-banner
 	.ident	"GCC: (GNU) 9.2.0"

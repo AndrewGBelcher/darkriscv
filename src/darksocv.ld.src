@@ -1,5 +1,4 @@
-/*
- * Copyright (c) 2018, Marcelo Samsoniuk
+/* Copyright (c) 2018, Marcelo Samsoniuk
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -25,39 +24,66 @@
  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <io.h>
-#include <stdio.h>
+/*
+    Memory Architectures:
 
-extern int  main ();
+	- Harvard: separate instruction (ROM) and data (RAM), has the
+	  advantage that is possible make the ROM memory readonly, in a way
+	  that bugs in the code cannot destruct the code.  Also, the use of
+	  separate ROM and RAM makes possible share the dual-port ROM and/or
+	  RAM between two cores.
 
-void boot(void)
+	- Von Neumann: unified instruction and data in a single memory
+	  (MEM), has the advantage that the .text and .data are contigous
+	  and without gaps, which means that the memory is better utilized. 
+	  However, as long there is no physical separation, a bug in the
+	  code can destroy both data and code.  Also, as long both ports of
+	  the dual-port MEM is already in use, there is no way to share to
+	  more than one core.
+*/
+
+MEMORY
 {
-    int tmp = 1&threads++;
+    IO  (rw!x) : ORIGIN = 0x80000000, LENGTH = 0x10
+#if HARVARD
+    ROM (x!rw) : ORIGIN = 0x00000000, LENGTH = 0x1000
+    RAM (rw!x) : ORIGIN = 0x00001000, LENGTH = 0x1000
+#else
+    MEM (rwx)  : ORIGIN = 0x00000000, LENGTH = 0x2000
+#endif
+}
 
-    volatile int timer_value;
-
-    putchar('0'+tmp); // print thread number
-
-    if(tmp==0)
+SECTIONS
+{
+    .io :
     {
-        timer_value = 49; // 1MHz GPIO
-        // timer_value = (io.board_cm*1000000+io.board_ck*1000)/20-1; // 10Hz blink!
+        io.o(COMMON)
 
-        io.timer = 1; // start timer w/ shortest time to force the thread 1 start
-        
-        while(1) main();
-    }
-    
-    io.timer = timer_value;
+    } > IO
 
-    while(1)
+    .text :
     {
-        io.led  ^= 1; // change led
-        io.gpio ^= 1; // change gpio
-
-        io.irq  = 0;  // clear interrupts and switch context
-    }
+        boot.o(.text)
+        *(.text)
+#if HARVARD
+    } > ROM
+#else
+    } > MEM
+#endif
+    .data :
+    {
+        *(.sbss)    
+        *(.rodata*)
+        *(.data)
+        *(.bss)
+        *(.rela*)
+	*(COMMON)
+#if HARVARD
+    } > RAM
+#else
+    } > MEM
+#endif
 }

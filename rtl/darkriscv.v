@@ -49,10 +49,11 @@
 `define FCC     7'b00011_11      // fencex
 `define CCC     7'b11100_11      // exx, csrxx
 
-// authenticate ra opcodes
+// shadow stack opcodes for RA authentication
+
  `define SSLD  7'b10101_11      // ssld
  `define SSST  7'b01010_11      // ssst
- `define SSTH  7'b11110_11      // ssth
+ `define SSTH  7'b11110_11      // ssth imm[31:12]
 
 
 // configuration file
@@ -103,42 +104,31 @@ module darkriscv
 
     reg [31:0] XIDATA;
 
-`ifdef __SSTACK__
-    reg SS_RES = 0;
-    reg XSS_RES = 0;
 
-	reg SS_INT = 0;
+`ifdef __SSTACK__
+
+    reg SS_RES = 0;
 	
-	reg [31:0] RECOVERY_RA;
+	reg [31:0] RECOVERY_RA = 32'd0; 
 
     reg [31:0] SHADOW_STACK_1 [0:255];
     reg [31:0] SHADOW_STACK_2 [0:255];
-   // reg [31:0] SHADOW_STACK_3 [0:255];
-  //  reg [31:0] SHADOW_STACK_4 [0:255];
 
-
-   // wire [31:0] SS_INDEX = 32'd0;
     reg [31:0] SS1_INDEX_VAL = 32'd0;
     reg [31:0] SS2_INDEX_VAL = 32'd0;
-  //  reg [31:0] SS3_INDEX_VAL = 32'd0;
- //   reg [31:0] SS4_INDEX_VAL = 32'd0;
+
     reg [31:0] SS_THREAD_SEL = 32'd0;
-//    reg [31:0] KEY;
- //   reg [31:0] SEED;
-  //  reg keyset;
 
     wire RES = IRES || SS_RES;
+    
+    reg XSSLD, XSSST, XSSTH;
+
 `else
     wire RES = IRES;
 `endif
     
-
-
-    reg XLUI, XAUIPC, XJAL, XJALR, XBCC, XLCC, XSCC, XMCC, XRCC, XMAC, XMOD;
     
-`ifdef __SSTACK__            
-    reg XSSLD, XSSST, XSSTH;
-`endif
+    reg XLUI, XAUIPC, XJAL, XJALR, XBCC, XLCC, XSCC, XMCC, XRCC, XMAC, XMOD;
 
     reg [31:0] XSIMM;
     reg [31:0] XUIMM;
@@ -461,59 +451,68 @@ module darkriscv
 
 `ifdef __SSTACK__
 
-		SS_THREAD_SEL = SSTH ? IDATA[31:12] : RES ? 0 : SS_THREAD_SEL;
-
-    // !!! we also need 4 diff stack index values too for each thread!
-       case (SS_THREAD_SEL)
-           1: SHADOW_STACK_2[SS2_INDEX_VAL] = SSST ? REG1[1] : SHADOW_STACK_2[SS2_INDEX_VAL];
-           default: SHADOW_STACK_1[SS1_INDEX_VAL] = SSST ? REG1[1] : SHADOW_STACK_1[SS1_INDEX_VAL];
-       endcase
+        // execute shadow stack thread select, set the selector to the upper immediate value
+        SS_THREAD_SEL = SSTH ? IDATA[31:12] : RES ? 0 : SS_THREAD_SEL;
+        
+        // switch upon which stack to use based on the shadow stack selector value
+        case (SS_THREAD_SEL)
+            1: SHADOW_STACK_2[SS2_INDEX_VAL] = SSST ? REG1[1] : SHADOW_STACK_2[SS2_INDEX_VAL];
+            default: SHADOW_STACK_1[SS1_INDEX_VAL] = SSST ? REG1[1] : SHADOW_STACK_1[SS1_INDEX_VAL];
+        endcase
 
 		// handle exeptions and trigger reset signal
-       case (SS_THREAD_SEL)
+        case (SS_THREAD_SEL)
 
-           1: SS_RES =	SSTH ? (SS_THREAD_SEL > 1) : 
+            1: SS_RES =	SSTH ? (SS_THREAD_SEL > 1) : 
 						SSST ? (SS2_INDEX_VAL > 254) : 
 						SSLD ? (SS2_INDEX_VAL < 1)  : 
 						SS_RES ^ RES;
 
-           default: SS_RES =	SSTH ? (SS_THREAD_SEL > 1) : 
-						SSST ? (SS1_INDEX_VAL > 254) : 
-						SSLD ? (SS1_INDEX_VAL < 1)  : 
-						SS_RES ^ RES;
-       endcase
+            default: SS_RES = SSTH ? (SS_THREAD_SEL > 1) : 
+                              SSST ? (SS1_INDEX_VAL > 254) : 
+                              SSLD ? (SS1_INDEX_VAL < 1)  : 
+                              SS_RES ^ RES;
+        endcase
         
-       case (SS_THREAD_SEL)
+        
+        // set the shadow stack stack pointer
+        case (SS_THREAD_SEL)
 
-           1: 
-           begin
-           SS2_INDEX_VAL = SS_RES ? 0 :
-           		           RES ? 0 :
-                           SSLD ? (SS2_INDEX_VAL - 1) :
-                           SSST ? (SS2_INDEX_VAL + 1) : 
-                           SS2_INDEX_VAL;
-                           
-		   SS1_INDEX_VAL = SS_RES ? 0 :
-		                   RES ? 0 :
-		                   SS1_INDEX_VAL;
-           end
+            1: 
+            begin
+            SS2_INDEX_VAL = SS_RES ? 0 :                 // shadow stack related reset clears sp
+           		            RES ? 0 :                    // normal reset clears sp
+                            SSLD ? (SS2_INDEX_VAL - 1) : // shadow stack load opcode dec the sp
+                            SSST ? (SS2_INDEX_VAL + 1) : // shadow stack store opcode inc the sp
+                            SS2_INDEX_VAL;               // in all other cases keep the sp the same
+            
+            // if selecting other stack only proccess reset signals               
+		    SS1_INDEX_VAL = SS_RES ? 0 :                 
+		                    RES ? 0 :
+		                    SS1_INDEX_VAL;
+            end
 
            default: 
            begin
-           SS1_INDEX_VAL = SS_RES ? 0 :
-           		           RES ? 0 :
-                           SSLD ? (SS1_INDEX_VAL - 1) :
-                           SSST ? (SS1_INDEX_VAL + 1) : 
-                           SS1_INDEX_VAL;
-                           
+           SS1_INDEX_VAL = SS_RES ? 0 :                 // shadow stack related reset clears sp
+           		           RES ? 0 :                    // normal reset clears sp
+                           SSLD ? (SS1_INDEX_VAL - 1) : // shadow stack load opcode dec the sp
+                           SSST ? (SS1_INDEX_VAL + 1) : // shadow stack store opcode inc the sp
+                           SS1_INDEX_VAL;               // in all other cases keep the sp the same
+           
+           // if selecting other stack only proccess reset signals                    
 		   SS2_INDEX_VAL = SS_RES ? 0 :
 		                   RES ? 0 :
 		                   SS2_INDEX_VAL;
            end
-       endcase
+        endcase
        
+        // execute the authentication of the return address agaisnt the current value in the shadow stack upon loading
 		if(SSLD)
 		begin
+		
+		   // based on which stack is selected, the recovery address is set to the current value in the stack, or the ra register
+		   // if values mismatch recovery ra becomes the value in the shadow stack, else it will be the ra value in the ra register
 		   case (SS_THREAD_SEL)
 			   1: RECOVERY_RA = (REG1[1]^SHADOW_STACK_2[SS2_INDEX_VAL]) != 0 ? SHADOW_STACK_2[SS2_INDEX_VAL] : REG1[1];
 			   default: RECOVERY_RA = (REG1[1]^SHADOW_STACK_1[SS1_INDEX_VAL]) != 0 ? SHADOW_STACK_1[SS1_INDEX_VAL] : REG1[1];
@@ -544,17 +543,18 @@ module darkriscv
             REG1[DPTR] <=   RES ? (RESMODE[4:0]==2 ? `__RESETSP__ : 0)  :        // reset sp
     `endif
                            HLT ? REG1[DPTR] :        // halt
-                         !DPTR ? 0 :                // x0 = 0, always!
-                         AUIPC ? PC+SIMM :
-                          JAL||
-                          JALR ? NXPC :
+                           !DPTR ? 0 :                // x0 = 0, always!
+                           AUIPC ? PC+SIMM :
+                           JAL||
+                           JALR ? NXPC :
                            LUI ? SIMM :
                            LCC ? LDATA :
-                          MCC||RCC ? RMDATA:
+                           MCC||RCC ? RMDATA:
     `ifdef __MAC16X16__                  
                            MAC ? REG2[DPTR]+KDATA :
     `endif
     
+    // if using a shadow stack and executing the ssld opcode, the ra register will be set to the recovery ra register
     `ifdef __SSTACK__                  
                            SSLD ? RECOVERY_RA :
     `endif
@@ -573,10 +573,10 @@ module darkriscv
         REG2[DPTR] <=   (RES) ? (RESMODE[4:0]==2 ? `__RESETSP__ : 0) :        // reset sp
 `endif        
                        HLT ? REG2[DPTR] :        // halt
-                     !DPTR ? 0 :                // x0 = 0, always!
-                     AUIPC ? PC+SIMM :
-                      JAL||
-                      JALR ? NXPC :
+                       !DPTR ? 0 :                // x0 = 0, always!
+                       AUIPC ? PC+SIMM :
+                       JAL||
+                       JALR ? NXPC :
                        LUI ? SIMM :
                        LCC ? LDATA :
                   MCC||RCC ? RMDATA:
@@ -587,7 +587,9 @@ module darkriscv
 `ifdef __MOD__
                        MOD ? REG2[DPTR]<=KDATA2 :
 
-`endif          
+`endif 
+
+    // if using a shadow stack and executing the ssld opcode, the ra register will be set to the recovery ra register         
     `ifdef __SSTACK__                  
                        SSLD ? RECOVERY_RA :
     `endif
@@ -661,12 +663,10 @@ module darkriscv
     assign IADDR = NXPC;
 `endif
  
-    //assign DEBUG = { (RES || SS_RES), |FLUSH, WR, RD };
     
-    assign DEBUG = SS_THREAD_SEL;//SS1_INDEX_VAL;
+    // output selector as a signal for debugging, i.e on leds
+    assign DEBUG = SS_THREAD_SEL;
 
-
-   // assign SS_INDEX = SS_INDEX_VAL;  
 
 
 endmodule

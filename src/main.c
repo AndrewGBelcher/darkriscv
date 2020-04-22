@@ -31,6 +31,8 @@
 #include <io.h>
 #include <stdio.h>
 
+#define newlib_fixed
+
 extern void banner(void);
 
 unsigned int   test = 0x12345678;
@@ -48,31 +50,35 @@ int test_call(void)
 
 int main(void)
 {
-    //banner();
 
+	#ifdef newlib_fixed
+   //  banner();
 
     // startup
 
-    //printf("board: %s (id=%d)\n",board_name(io.board_id),io.board_id);
-   // printf("build: darkriscv fw build %s\n",BUILD);
+   //printf("board: %s (id=%d)\n",board_name(io.board_id),io.board_id);
+   //printf("build: darkriscv fw build %s\n",BUILD);
+/*
+    printf("core0: darkriscv@%d.%dMHz with %s%s%s\n",
+        io.board_cm,                        // board clock MHz
+        io.board_ck,                        // board clock kHz
+        ARCH,                               // architecture
+        threads>1?"+MT":"",                 //  MT support
+        mac(1000,16,16)==1256?"+MAC":"");   // MAC support
+*/
 
-   // printf("core0: darkriscv@%d.%dMHz with %s%s%s\n",
-     //   io.board_cm,                        // board clock MHz
-     //   io.board_ck,                        // board clock kHz
-     //   ARCH,                               // architecture
-     //   threads>1?"+MT":"",                 //  MT support
-     //   mac(1000,16,16)==1256?"+MAC":"");   // MAC support
-
-				char* str = "\nDarkRiscv!\n\n";
-								putstr(str);
     threads = 0; // prepare for the next restart
 
-  //  printf("uart0: 115200 bps (div=%d)\n",io.uart.baud);
-   // printf("timr0: periodic timer=%dHz (io.timer=%d)\n",(io.board_cm*1000000u+io.board_ck*1000u)/(io.timer+1),io.timer);
-   // printf("\n");
+   // printf("uart0: 115200 bps (div=%d)\n",io.uart.baud);
+    printf("timr0: periodic timer=%dHz (io.timer=%d)\n",(io.board_cm*1000000u+io.board_ck*1000u)/(io.timer+1),io.timer);
+    printf("\n");
 
-   // printf("Welcome to DarkRISCV!\n");
+    printf("Welcome to DarkRISCV!\n");
 
+	#else
+		char* str = "\nDarkRiscv!!\n\n";
+		putstr(str);
+	#endif
 
     // main loop
 
@@ -80,28 +86,35 @@ int main(void)
     {
         char  buffer[64];
 
-        //printf("> ");
+		#ifdef newlib_fix
+		printf("> ");
+		#else
+			putstr("> ");
+		#endif
+
         memset(buffer,0,sizeof(buffer));
         gets(buffer,sizeof(buffer));
         
         char *argv[8];
         int   argc;
 
-        for(argc=0;argc<8 && (argv[argc]=strtok(argc==0?buffer:NULL," "));argc++)
-            //printf("argv[%d] = [%s]\n",argc,argv[argc]);
-            ;
-
+		//#ifdef newlib_fix
+        //for(argc=0;argc<8 && (argv[argc]=strtok(argc==0?buffer:NULL," "));argc++)
+        //    printf("argv[%d] = [%s]\n",argc,argv[argc]);
+        //    ;
+		//#endif
+		
         if(argv[0])
         {
           if(!strcmp(argv[0],"clear"))
           {
-          //    printf("\33[H\33[2J");
+              putstr("\33[H\33[2J");
           }
           else
           if(!strcmp(argv[0],"atros"))
           {
               banner();
-          //    printf("wow! hello atros! o/\n");
+              putstr("wow! hello atros! o/\n");
           }
           else
           if(!strcmp(argv[0],"dump"))
@@ -112,9 +125,9 @@ int main(void)
               
               for(i=0;i!=16;i++)
               {
-           //       printf("%x: ",(unsigned) p);
+				 // printf("%x: ",(unsigned) p);
               
-            //      for(j=0;j!=16;j++) printf("%x ",p[j]);
+			     // for(j=0;j!=16;j++) printf("%x ",p[j]);
                   for(j=0;j!=16;j++) putchar((p[j]>=32&&p[j]<127)?p[j]:'.');
 
                   putchar('\n');
@@ -140,16 +153,16 @@ int main(void)
               {
                   if(argv[0][0]=='r')
                   {
-                //      if(argv[0][kp]=='b') printf("%x ",j[(char  *)k]);
-                //      if(argv[0][kp]=='w') printf("%x ",j[(short *)k]);
-               //       if(argv[0][kp]=='l') printf("%x ",j[(int   *)k]);
+                  //      if(argv[0][kp]=='b') printf("%x ",j[(char  *)k]);
+                  //      if(argv[0][kp]=='w') printf("%x ",j[(short *)k]);
+                  //       if(argv[0][kp]=='l') printf("%x ",j[(int   *)k]);
                   }
                   else
                   {
                       w = xtoi(argv[vp++]);
-                 ///     if(argv[0][kp]=='b') printf("%x ",j[(char  *)k]=w);
-                 //     if(argv[0][kp]=='w') printf("%x ",j[(short *)k]=w);
-                 //     if(argv[0][kp]=='l') printf("%x ",j[(int   *)k]=w);
+                   // if(argv[0][kp]=='b') printf("%x ",j[(char  *)k]=w);
+                   // if(argv[0][kp]=='w') printf("%x ",j[(short *)k]=w);
+                   // if(argv[0][kp]=='l') printf("%x ",j[(int   *)k]=w);
                   }
               }
             //  printf("\n");
@@ -200,32 +213,11 @@ int main(void)
 
            //   printf("mac = %d\n",mac(acc,x,y));
           }
-/*           else
-		  if(!strcmp(argv[0],"mod"))
-          {
-              int acc;
-              int a = atoi(argv[1]);
-              int b = atoi(argv[2]);
 
-              printf("mod = %d\n from acc=%d a=%d b=%d\n",mod(acc,a,b), acc, a, b);
-
-/* 			  asm volatile
-			  (
-				"mod   %[z], %[x], %[y]\n\t"
-				: [z] "=r" (acc)
-				: [x] "r" (a), [y] "r" (b)
-
-			  );
-			printf("mod = %d\n",acc); 
-
-
-          }      
- */
-   
           else
 		  if(!strcmp(argv[0],"sstest"))
           {
-		//	printf("\nrunning ss assembly tests\n");
+			putstr("\nrunning ss assembly tests\n");
 			int d = 0;
 			for(int i=0; i<10000; i++)d=d*i;
 /*
@@ -260,45 +252,31 @@ int main(void)
 				// function execution would be here
 				asm volatile("lui ra,44");
 				asm volatile("ssld");
-			}*/
+			}
+*/
 
 			if(!strcmp(argv[1],"call"))
 			{
 				test_call();
-				char* string = "\nrecovery worked!\n\n";
-				putstr(string);
-
+				putstr("\nrecovery worked!\n\n");
 			}
-/*
-			else if(!strcmp(argv[1],"th"))
-			{
-				
-				//	int thread_sel = atoi(argv[2]);
-				//	//asm volatile ("ssth #" STRINGIFY(thread_sel));
-				//	short instrs[2];
-			//		instrs[0] = (short)(0x7b);
-				//	instrs[1] = (short)(thread_sel);
-				//	((void(*)(void))((int)instrs | 1))();
-				asm volatile("ssth 1");
 
-					printf("ssth passed\n");
-				
-			}
 			else if(!strcmp(argv[1],"th_bounds"))
 			{
-
 				asm volatile("ssth 2");
-
-					printf("ssth passed\n");
-				
+				putstr("ssth passed\n");				
 			}
 
 			else if(!strcmp(argv[1],"st_bounds"))
 			{
+				char value[10];
+
 				for(int i = 0; i < 257; i++)
 				{
 					asm volatile("ssst");
-					printf("on st:%d\n", i);
+					putstr("on st:");
+					putstr(itoa(i, value,10));
+					putstr('\n');
 				}
 			}
 			else if(!strcmp(argv[1],"st"))
@@ -309,18 +287,19 @@ int main(void)
 			else if(!strcmp(argv[1],"ld"))
 			{
 				asm volatile("ssld");
-			}*/
-			//printf("\nss assembly tests done\n"); 
+			}
+
+			putstr("\nss assembly tests done\n"); 
           }      
    
 		  else
           if(argv[0][0])
           {
-          //    printf("command: [%s] not found.\n"
-        //             "valid commands: clear, dump <hex>, led <hex>, timer <dec>, gpio <hex>\n"
-        //             "                mul <dec> <dec>, div <dec> <dec>, mac <dec> <dec> <dec>\n"
-        //             "                rd[m][bwl] <hex> [<hex> when m], wr[m][bwl] <hex> <hex> [<hex> when m]\n",
-        //             argv[0]);
+         //    printf("command: [%s] not found.\n"
+         //             "valid commands: clear, dump <hex>, led <hex>, timer <dec>, gpio <hex>\n"
+         //             "                mul <dec> <dec>, div <dec> <dec>, mac <dec> <dec> <dec>\n"
+         //             "                rd[m][bwl] <hex> [<hex> when m], wr[m][bwl] <hex> <hex> [<hex> when m]\n",
+         //             argv[0]);
           }
        }
     }

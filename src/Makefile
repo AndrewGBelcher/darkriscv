@@ -81,7 +81,18 @@ all:
 	#make $(PROJ).x86
 
 clean:
-	-rm *.s *.o $(PROJ).{bin,lst,map,ram,rom,x86,text,data,bin}
+	rm -rf *.s 
+	rm -rf *.o 
+	rm -rf $(PROJ).rom
+	rm -rf $(PROJ).ram
+	rm -rf $(PROJ).lst
+	rm -rf $(PROJ).map
+	rm -rf $(PROJ).x86
+	rm -rf $(PROJ).text
+	rm -rf $(PROJ).data
+	rm -rf $(PROJ).bin
+	#rm -rf $(PROJ).ld
+#{bin,lst,map,ram,rom,x86,text,data,bin,ld}
 
 %.o: %.s
 	$(AS) $(ASFLAGS) -c $< -o $@
